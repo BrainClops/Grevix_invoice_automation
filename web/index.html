@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LedgerLens | Autonomous invoice intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{--bg:#06080d;--ink:#e8ecf4;--mute:#8892a6;--line:rgba(255,255,255,.08);--glass:rgba(16,20,32,.62);
+--cyan:#5ef2d0;--violet:#8b7bff;--amber:#ffb454;--red:#ff5d73;--green:#4ade80;
+--sans:'Space Grotesk',system-ui,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace}
+*{box-sizing:border-box;margin:0}
+body{background:radial-gradient(1200px 600px at 70% -10%,#141a33 0%,var(--bg) 60%);color:var(--ink);font:400 15px/1.55 var(--sans);min-height:100vh}
+.bar{position:fixed;inset:0 0 auto 0;z-index:5;display:flex;justify-content:space-between;align-items:center;padding:16px 32px;backdrop-filter:blur(12px);background:linear-gradient(#06080dcc,transparent)}
+.brand{display:flex;gap:12px;align-items:center;font-weight:700;letter-spacing:.02em}
+.glyph{width:22px;height:22px;border-radius:7px;background:conic-gradient(from 200deg,var(--cyan),var(--violet),var(--cyan));box-shadow:0 0 22px #5ef2d055}
+.chip{font:500 12px var(--mono);padding:6px 12px;border:1px solid var(--line);border-radius:99px;color:var(--mute);display:flex;gap:8px;align-items:center}
+.chip i{width:7px;height:7px;border-radius:50%;background:var(--amber);box-shadow:0 0 10px currentColor}
+.chip.live i{background:var(--green)}
+#stage{position:relative;height:62vh;min-height:420px;overflow:hidden}
+#stage canvas{position:absolute;inset:0;width:100%;height:100%}
+.hero{position:absolute;left:32px;bottom:44px;max-width:560px;z-index:2;pointer-events:none}
+.hero h1{font-size:clamp(30px,4.4vw,54px);line-height:1.05;letter-spacing:-.025em;font-weight:700}
+.hero h1 span{background:linear-gradient(95deg,var(--cyan),var(--violet));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{color:var(--mute);margin-top:14px;max-width:46ch}
+.tag{position:absolute;z-index:2;transform:translate(-50%,0);font:500 11px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mute);pointer-events:none;transition:color .3s}
+.tag.on{color:var(--cyan)}
+.wrap{max-width:1180px;margin:0 auto;padding:0 32px 80px;position:relative;z-index:3}
+.panel{background:var(--glass);border:1px solid var(--line);border-radius:18px;backdrop-filter:blur(14px)}
+.drop{display:flex;justify-content:space-between;align-items:center;gap:24px;padding:26px 30px;border-style:dashed;cursor:pointer;transition:.25s}
+.drop.over,.drop:hover{border-color:var(--cyan);box-shadow:0 0 0 4px #5ef2d014,0 0 60px #5ef2d01f inset}
+.drop h2{font-size:20px;font-weight:500}.drop p{color:var(--mute);font-size:14px}
+.btns{display:flex;gap:10px;flex-wrap:wrap}
+button{font:500 14px var(--sans);color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:12px;padding:11px 18px;cursor:pointer;transition:.2s}
+button:hover{border-color:var(--mute)}
+button.primary{background:linear-gradient(95deg,var(--cyan),var(--violet));color:#05070c;border:0;font-weight:700}
+button:disabled{opacity:.5;cursor:progress}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin:18px 0 26px}
+.kpi{padding:18px 20px}.kpi small{display:block;color:var(--mute);font:500 11px var(--mono);letter-spacing:.12em;text-transform:uppercase}
+.kpi b{font:500 26px var(--mono);letter-spacing:-.02em}
+#results{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:16px}
+.card{padding:22px;opacity:0;transform:translateY(14px);animation:rise .55s cubic-bezier(.2,.8,.2,1) forwards;animation-delay:calc(var(--i)*70ms);border-top:2px solid var(--c)}
+@keyframes rise{to{opacity:1;transform:none}}
+.s-approve{--c:var(--green)}.s-review{--c:var(--amber)}.s-reject{--c:var(--red)}
+.top{display:flex;justify-content:space-between;gap:12px}
+.card h3{font-size:17px;font-weight:500}.mono{font:400 12px var(--mono);color:var(--mute);word-break:break-all}
+.pill{height:fit-content;font:500 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;padding:5px 10px;border-radius:99px;color:var(--c);background:color-mix(in srgb,var(--c) 14%,transparent)}
+.money{display:flex;justify-content:space-between;align-items:baseline;margin:16px 0 10px}
+.money b{font:500 24px var(--mono)}.money span{font:400 12px var(--mono);color:var(--mute)}
+.risk{height:5px;border-radius:9px;background:var(--line);overflow:hidden}.risk i{display:block;height:100%;background:var(--c);transition:width 1s .3s}
+.flags{list-style:none;padding:0;margin-top:14px;display:grid;gap:8px}
+.flags li{font-size:13px;color:#c3cada;padding:9px 11px;border-radius:10px;background:#ffffff08;border-left:2px solid var(--f)}
+.flags b{font:500 10.5px var(--mono);letter-spacing:.08em;color:var(--f);display:block}
+.sev-high{--f:var(--red)}.sev-medium{--f:var(--amber)}.sev-low{--f:var(--cyan)}
+.empty{grid-column:1/-1;text-align:center;color:var(--mute);padding:46px}
+@media(max-width:700px){.drop{flex-direction:column;align-items:flex-start}.bar,.wrap{padding-inline:18px}.hero{left:18px}#results{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="brand"><span class="glyph"></span>LedgerLens</div>
+  <div class="chip" id="mode"><i></i><span>connecting</span></div>
+</header>
+
+<section id="stage" aria-label="Interactive 3D rendering of the invoice pipeline">
+  <div class="hero">
+    <h1>Every invoice, <span>interrogated</span> before it costs you a rupee.</h1>
+    <p>Documents are read, reconciled against purchase orders and cross-examined for duplication, drift and fraud in seconds.</p>
+  </div>
+</section>
+
+<main class="wrap">
+  <section class="panel drop" id="drop" tabindex="0">
+    <div><h2>Release invoices into the pipeline</h2><p>PDF, PNG or JPG. Drop several at once; they are audited in sequence.</p></div>
+    <div class="btns">
+      <button class="primary" id="demo">Run the demo corpus</button>
+      <button id="reset">Reset ledger</button>
+    </div>
+    <input id="file" type="file" accept=".pdf,.png,.jpg,.jpeg" multiple hidden>
+  </section>
+  <section class="kpis" id="kpis"></section>
+  <section id="results"><div class="empty">No invoices audited yet. Drop a file, or run the demo corpus.</div></section>
+</main>
+
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+
+/* ---------- 3D pipeline ---------- */
+const STAGES = ['Ingest', 'Extract', 'Match', 'Flag', 'Verdict'];
+const COLORS = {idle: 0x5ef2d0, approve: 0x4ade80, review: 0xffb454, reject: 0xff5d73};
+const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const host = document.getElementById('stage');
+
+const renderer = new THREE.WebGLRenderer({antialias: true, alpha: true});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+host.prepend(renderer.domElement);
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x06080d, 0.03);
+const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 120);
+
+const anchors = [[-8, -1, 0], [-4, 1.5, -1.5], [0, -0.6, 1], [4, 1.3, -1], [8, -0.3, 0.5]].map(p => new THREE.Vector3(...p));
+const path = new THREE.CatmullRomCurve3(anchors, false, 'catmullrom', 0.5);
+scene.add(new THREE.Mesh(new THREE.TubeGeometry(path, 240, 0.018, 6), new THREE.MeshBasicMaterial({color: 0x2b3556, transparent: true, opacity: 0.8})));
+
+const nodes = anchors.map((pos, i) => {
+  const group = new THREE.Group(); group.position.copy(pos);
+  const core = new THREE.Mesh(new THREE.SphereGeometry(0.26, 24, 24), new THREE.MeshBasicMaterial({color: COLORS.idle}));
+  const shell = new THREE.Mesh(new THREE.IcosahedronGeometry(0.62, 1), new THREE.MeshBasicMaterial({color: 0x8b7bff, wireframe: true, transparent: true, opacity: 0.55}));
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.95, 0.012, 8, 72), new THREE.MeshBasicMaterial({color: 0x5ef2d0, transparent: true, opacity: 0.4}));
+  ring.rotation.x = Math.PI / 2.4;
+  group.add(core, shell, ring); scene.add(group);
+  const tag = Object.assign(document.createElement('div'), {className: 'tag', textContent: `0${i + 1} ${STAGES[i]}`});
+  host.append(tag);
+  return {group, core, shell, ring, tag};
+});
+
+const COUNT = 260, seeds = Array.from({length: COUNT}, () => ({t: Math.random(), v: 0.035 + Math.random() * 0.06, j: new THREE.Vector3().randomDirection().multiplyScalar(Math.random() * 0.22)}));
+const flow = new THREE.Points(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(new Float32Array(COUNT * 3), 3)),
+  new THREE.PointsMaterial({color: 0x5ef2d0, size: 0.085, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false}));
+scene.add(flow);
+
+const stars = new THREE.Float32BufferAttribute(Array.from({length: 1500}, () => (Math.random() - 0.5) * 90), 3);
+scene.add(new THREE.Points(new THREE.BufferGeometry().setAttribute('position', stars), new THREE.PointsMaterial({color: 0x6b7aa8, size: 0.05, transparent: true, opacity: 0.55})));
+
+const state = {busy: false, verdict: null, mx: 0, my: 0};
+const tint = new THREE.Color();
+function resize() {
+  const {clientWidth: w, clientHeight: h} = host;
+  renderer.setSize(w, h); camera.aspect = w / h; camera.position.z = w < 700 ? 19 : 13.5; camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(host); resize();
+host.addEventListener('pointermove', e => { const r = host.getBoundingClientRect(); state.mx = (e.clientX - r.left) / r.width - 0.5; state.my = (e.clientY - r.top) / r.height - 0.5; });
+
+const clock = new THREE.Clock(), probe = new THREE.Vector3();
+(function frame() {
+  requestAnimationFrame(frame);
+  const dt = Math.min(clock.getDelta(), 0.05), time = clock.elapsedTime, speed = (state.busy ? 4.2 : 1) * (calm ? 0.2 : 1);
+  const live = state.busy ? Math.floor(time * 2.6) % 5 : -1;
+
+  nodes.forEach((n, i) => {
+    const pulse = 1 + (i === live ? 0.28 : 0.06) * Math.sin(time * 3 + i);
+    n.group.scale.setScalar(pulse);
+    n.shell.rotation.y += dt * (0.5 + i * 0.12); n.shell.rotation.x += dt * 0.3; n.ring.rotation.z += dt * 0.6;
+    const target = i === 4 && state.verdict ? COLORS[state.verdict] : COLORS.idle;
+    n.core.material.color.lerp(tint.setHex(target), 0.08);
+    n.tag.classList.toggle('on', i === live);
+    probe.copy(n.group.position).add({x: 0, y: -1.5, z: 0}).project(camera);
+    n.tag.style.left = `${(probe.x * 0.5 + 0.5) * host.clientWidth}px`;
+    n.tag.style.top = `${(-probe.y * 0.5 + 0.5) * host.clientHeight}px`;
+  });
+
+  const buf = flow.geometry.attributes.position;
+  seeds.forEach((s, i) => {
+    s.t = (s.t + s.v * dt * speed) % 1;
+    path.getPointAt(s.t, probe); buf.setXYZ(i, probe.x + s.j.x, probe.y + s.j.y, probe.z + s.j.z);
+  });
+  buf.needsUpdate = true;
+
+  camera.position.x += ((state.mx * 3.2) - camera.position.x) * 0.04;
+  camera.position.y += ((2.2 - state.my * 2.4) - camera.position.y) * 0.04;
+  camera.lookAt(0, 0.1, 0);
+  renderer.render(scene, camera);
+})();
+
+/* ---------- Application ---------- */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+const LABEL = {approve: 'Approved', review: 'Needs review', reject: 'Rejected'};
+const ledger = [];
+
+const money = (v, cur = 'INR') => {
+  try { return new Intl.NumberFormat('en-IN', {style: 'currency', currency: cur, maximumFractionDigits: 2}).format(v); }
+  catch { return `${cur} ${Number(v).toLocaleString('en-IN')}`; }
+};
+
+function render() {
+  const by = s => ledger.filter(r => r.status === s);
+  const held = [...by('review'), ...by('reject')].reduce((a, r) => a + r.invoice.total, 0);
+  const kpis = [['Audited', ledger.length], ['Approved', by('approve').length], ['Needs review', by('review').length],
+    ['Rejected', by('reject').length], ['Value held back', money(held)], ['Time saved (est.)', `${ledger.length * 6} min`]];
+  $('kpis').innerHTML = kpis.map(([k, v]) => `<div class="panel kpi"><small>${k}</small><b>${v}</b></div>`).join('');
+  $('results').innerHTML = ledger.length ? ledger.map(card).join('') : '<div class="empty">No invoices audited yet. Drop a file, or run the demo corpus.</div>';
+}
+
+function card(r, i) {
+  const inv = r.invoice;
+  const flags = r.flags.map(f => `<li class="sev-${f.severity}"><b>${esc(f.code.replaceAll('_', ' '))}</b>${esc(f.message)}</li>`).join('');
+  return `<article class="panel card s-${r.status}" style="--i:${i % 12}">
+    <div class="top"><div><h3>${esc(inv.vendor_name) || 'Unidentified vendor'}</h3>
+      <p class="mono">${esc(inv.invoice_number) || 'no number'} · ${esc(inv.po_number) || 'no PO'} · ${esc(r.filename)}</p></div>
+      <span class="pill">${LABEL[r.status]}</span></div>
+    <div class="money"><b>${money(inv.total, inv.currency)}</b><span>${r.po_found ? 'PO approved ' + money(r.po_total, inv.currency) : 'no matching PO'}</span></div>
+    <div class="risk"><i style="width:${r.risk_score}%"></i></div>
+    <ul class="flags">${flags || '<li class="sev-low"><b>CLEAN</b>Every control passed.</li>'}</ul></article>`;
+}
+
+async function submit(request) {
+  document.querySelectorAll('button').forEach(b => b.disabled = true);
+  state.busy = true; state.verdict = null;
+  try {
+    const res = await fetch(...request);
+    if (!res.ok) throw new Error(`Server responded ${res.status}`);
+    const data = await res.json();
+    if (request[0].endsWith('demo')) ledger.length = 0;
+    ledger.push(...data.results);
+    data.errors.forEach(e => alert(`${e.filename}: ${e.error}`));
+    const batch = data.results.map(r => r.status);
+    state.verdict = batch.includes('reject') ? 'reject' : batch.includes('review') ? 'review' : batch.length ? 'approve' : null;
+    render();
+  } catch (err) { alert(err.message); }
+  finally { await new Promise(r => setTimeout(r, 900)); state.busy = false; document.querySelectorAll('button').forEach(b => b.disabled = false); }
+}
+
+const upload = files => { if (!files.length) return; const body = new FormData(); [...files].forEach(f => body.append('files', f)); submit(['/api/process', {method: 'POST', body}]); };
+const drop = $('drop');
+drop.addEventListener('click', e => { if (!e.target.closest('button')) $('file').click(); });
+$('file').addEventListener('change', e => { upload(e.target.files); e.target.value = ''; });
+['dragover', 'dragenter'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave', 'drop'].forEach(t => drop.addEventListener(t, () => drop.classList.remove('over')));
+drop.addEventListener('drop', e => { e.preventDefault(); upload(e.dataTransfer.files); });
+$('demo').addEventListener('click', () => submit(['/api/demo', {method: 'POST'}]));
+$('reset').addEventListener('click', async () => { await fetch('/api/reset', {method: 'POST'}); ledger.length = 0; state.verdict = null; render(); });
+
+fetch('/api/health').then(r => r.json()).then(h => {
+  $('mode').classList.toggle('live', h.mode === 'llm');
+  $('mode').lastElementChild.textContent = h.mode === 'llm' ? 'LLM vision engine online' : 'Offline deterministic engine';
+}).catch(() => { $('mode').lastElementChild.textContent = 'API unreachable'; });
+render();
+</script>
+</body>
+</html>
