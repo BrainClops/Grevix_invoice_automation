@@ -1,8 +1,7 @@
-"""Step 4: Flag. Rules jo suspicious invoices pakadte hain.
+"""Step 4: Flag. Rules that catch suspicious invoices.
 
-Har rule ek list[Flag] deta hai (code, severity, message). Naya rule jodna ho
-(jaise Challenge Card ka naya requirement) to bas ek function likho
-aur RULES list mein daal do.
+Each rule returns a list[Flag] (code, severity, message). To add a new control,
+write one function and append it to RULES.
 """
 from __future__ import annotations
 
@@ -14,9 +13,9 @@ from .schema import Flag, Invoice
 
 WEIGHTS = {"low": 10, "medium": 20, "high": 40}
 
-MISMATCH_MEDIUM_PCT = 0.02  # 2% se upar = medium
-MISMATCH_HIGH_PCT = 0.10    # 10% se upar = high
-MATH_TOLERANCE = 1.0        # rounding ka chhota farq chalega
+MISMATCH_MEDIUM_PCT = 0.02  # above 2% = medium
+MISMATCH_HIGH_PCT = 0.10    # above 10% = high
+MATH_TOLERANCE = 1.0        # tolerate tiny rounding differences
 
 
 def _parse_date(value: Optional[str]) -> Optional[date]:
@@ -31,7 +30,7 @@ def _parse_date(value: Optional[str]) -> Optional[date]:
 
 
 class Ctx:
-    """Rules ko chahiye hone wala saara context ek jagah."""
+    """Everything a rule needs, gathered in one place."""
 
     def __init__(self, invoice: Invoice, match: MatchResult,
                  duplicate_file: bool, duplicate_number: bool, today: date):
@@ -45,14 +44,14 @@ class Ctx:
 def rule_duplicate_file(c: Ctx) -> list[Flag]:
     if c.duplicate_file:
         return [Flag(code="DUPLICATE_FILE", severity="high",
-                     message="Ye exact same file pehle process ho chuki hai.")]
+                     message="This exact file has already been processed.")]
     return []
 
 
 def rule_duplicate_number(c: Ctx) -> list[Flag]:
     if c.duplicate_number:
         return [Flag(code="DUPLICATE_INVOICE_NUMBER", severity="high",
-                     message=f"Invoice number {c.invoice.invoice_number} is vendor se pehle aa chuka hai (alag file).")]
+                     message=f"Invoice number {c.invoice.invoice_number} was already submitted by this vendor in a different file.")]
     return []
 
 
@@ -60,10 +59,10 @@ def rule_po(c: Ctx) -> list[Flag]:
     inv, m = c.invoice, c.match
     if not inv.po_number:
         return [Flag(code="NO_PO_NUMBER", severity="medium",
-                     message="Invoice par PO number nahi hai.")]
+                     message="No PO number appears on the invoice.")]
     if not m.po_found:
         return [Flag(code="PO_NOT_FOUND", severity="high",
-                     message=f"PO {inv.po_number} database mein nahi mila.")]
+                     message=f"PO {inv.po_number} was not found in the purchase-order database.")]
     return []
 
 
@@ -72,10 +71,10 @@ def rule_vendor(c: Ctx) -> list[Flag]:
     flags: list[Flag] = []
     if not m.vendor_known:
         flags.append(Flag(code="UNKNOWN_VENDOR", severity="medium",
-                          message=f"Vendor '{inv.vendor_name}' approved list mein nahi hai."))
+                          message=f"Vendor '{inv.vendor_name}' is not on the approved vendor list."))
     if m.po_found and not same_vendor(inv.vendor_name, m.po_vendor):
         flags.append(Flag(code="VENDOR_MISMATCH", severity="high",
-                          message=f"Invoice vendor '{inv.vendor_name}' hai, par PO vendor '{m.po_vendor}' hai."))
+                          message=f"Invoice vendor '{inv.vendor_name}' differs from the PO vendor '{m.po_vendor}'."))
     return flags
 
 
@@ -89,8 +88,8 @@ def rule_amount(c: Ctx) -> list[Flag]:
         return []
     severity = "high" if pct > MISMATCH_HIGH_PCT else "medium"
     return [Flag(code="AMOUNT_MISMATCH", severity=severity,
-                 message=f"Invoice total {inv.total:,.2f} hai, PO approved total {m.po_total:,.2f} "
-                         f"(farq {diff:+,.2f}, {pct:.1%}).")]
+                 message=f"Invoice total {inv.total:,.2f} versus approved PO total {m.po_total:,.2f} "
+                         f"(variance {diff:+,.2f}, {pct:.1%}).")]
 
 
 def rule_math(c: Ctx) -> list[Flag]:
@@ -100,21 +99,21 @@ def rule_math(c: Ctx) -> list[Flag]:
         items_sum = sum(i.amount for i in inv.line_items)
         if abs(items_sum - inv.subtotal) > MATH_TOLERANCE:
             flags.append(Flag(code="LINE_ITEMS_MISMATCH", severity="medium",
-                              message=f"Line items ka sum {items_sum:,.2f} hai, par subtotal {inv.subtotal:,.2f} likha hai."))
+                              message=f"Line items sum to {items_sum:,.2f}, but the stated subtotal is {inv.subtotal:,.2f}."))
     if inv.subtotal is not None and inv.tax is not None:
         if abs(inv.subtotal + inv.tax - inv.total) > MATH_TOLERANCE:
             flags.append(Flag(code="TOTAL_MATH_ERROR", severity="medium",
-                              message="Subtotal + tax, total ke barabar nahi hai."))
+                              message="Subtotal plus tax does not equal the stated total."))
     return flags
 
 
 def rule_date(c: Ctx) -> list[Flag]:
     d = _parse_date(c.invoice.invoice_date)
     if c.invoice.invoice_date and d is None:
-        return [Flag(code="BAD_DATE", severity="low", message="Invoice date samajh nahi aayi.")]
+        return [Flag(code="BAD_DATE", severity="low", message="The invoice date could not be parsed.")]
     if d and d > c.today:
         return [Flag(code="FUTURE_DATE", severity="medium",
-                     message=f"Invoice date {d} aaj se aage ki hai.")]
+                     message=f"Invoice date {d} lies in the future.")]
     return []
 
 
