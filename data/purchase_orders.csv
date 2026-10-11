@@ -1,6 +1,8 @@
-po_number,vendor_name,approved_total,status
-PO-1001,ABC Traders Pvt Ltd,59000,open
-PO-1002,Sharma Electronics,100000,open
-PO-1003,Global Office Supplies,23600,open
-PO-1004,Delta Logistics,45000,open
-PO-1005,Kolkata Print House,12000,open
+po_number,vendor_name,approved_total,status,currency
+PO-1001,ABC Traders Pvt Ltd,59000,open,INR
+PO-1002,Sharma Electronics,100000,open,INR
+PO-1003,Global Office Supplies,23600,open,INR
+PO-1004,Delta Logistics,45000,open,INR
+PO-1005,Kolkata Print House,12000,open,INR
+PO-2001,Müller Elektronik GmbH,2975,open,EUR
+PO-2002,Global Office Supplies,12420,open,USD

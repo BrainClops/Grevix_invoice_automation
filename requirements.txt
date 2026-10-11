@@ -7,4 +7,5 @@ pandas>=2
 pydantic>=2
 anthropic>=0.40
 reportlab>=4
-pytest>=8
+pytest>=8\nrapidocr-onnxruntime>=1.3.24\n
+google-genai>=1.0.0

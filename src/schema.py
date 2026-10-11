@@ -1,4 +1,4 @@
-"""Data models: poore project mein ek hi jagah jahan shape define hoti hai."""
+"""Data models: the single source of truth for every shape in the project."""
 from __future__ import annotations
 
 from typing import Literal, Optional
@@ -26,6 +26,7 @@ class Invoice(BaseModel):
 
 
 Severity = Literal["low", "medium", "high"]
+Tier = Literal["critical", "supporting"]
 Status = Literal["approve", "review", "reject"]
 
 
@@ -33,6 +34,17 @@ class Flag(BaseModel):
     code: str
     severity: Severity
     message: str
+    tier: Tier = "critical"  # only critical flags may reject an invoice
+
+
+class GateReport(BaseModel):
+    """What the evidence gate concluded about one document."""
+    grounded: bool = True
+    verified: list[str] = Field(default_factory=list)
+    unverified: list[str] = Field(default_factory=list)
+    ignored_noise: list[str] = Field(default_factory=list)
+    genuine_issues: list[str] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
 
 
 class InvoiceResult(BaseModel):
@@ -41,6 +53,9 @@ class InvoiceResult(BaseModel):
     invoice: Invoice
     po_found: bool = False
     po_total: Optional[float] = None
+    po_currency: Optional[str] = None
     flags: list[Flag] = Field(default_factory=list)
     risk_score: int = 0
     status: Status = "approve"
+    gate: Optional[GateReport] = None
+    timings_ms: dict[str, float] = Field(default_factory=dict)

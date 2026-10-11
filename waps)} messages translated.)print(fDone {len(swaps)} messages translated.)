@@ -1,0 +1,12 @@
+[33mcommit ce129614b95e69fb9c17d9b944dd909fbefee1a4[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m
+Author: rohit <mohammadrohit456@gmail.com>
+Date:   Sun Oct 11 02:22:00 2026 +0530
+
+    Translate flag messages to English
+
+ data/sample_invoices/01_clean.pdf              | 4 [32m++[m[31m--[m
+ data/sample_invoices/02_amount_mismatch.pdf    | 4 [32m++[m[31m--[m
+ data/sample_invoices/03_exact_duplicate.pdf    | 4 [32m++[m[31m--[m
+ data/sample_invoices/04_unknown_vendor.pdf     | 4 [32m++[m[31m--[m
+ data/sample_invoices/05_resubmitted_number.pdf | 4 [32m++[m[31m--[m
+ 5 files changed, 10 insertions(+), 10 deletions(-)
